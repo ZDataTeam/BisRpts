@@ -1,6 +1,11 @@
 # CONNECTION TO ORACLE
 
 library(RODBC)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(sca)
+library(XLConnect)
 
 channel <- odbcConnect("OracleInstantClient", uid = "zhangj", pwd = "zhangj1234")
 
@@ -12,53 +17,49 @@ risk.data.all$DATA_DT <- as.Date(risk.data.all$DATA_DT)
 
 odbcClose(channel)
 
-# data for test preparation
-data.length = 50
-lastDay <- seq(as.Date("2016-02-01"), length = 15, by = "1 month") - 1
-DATA_DT <- as.character(lastDay[sample(1:length(lastDay), size = data.length, replace = T)])
-BEGIN_DATE <- as.character(sample(seq(as.Date('2016/01/01'), as.Date('2017/03/31'), by = "day"), data.length))
+# # data for test preparation
+# data.length = 50
+# lastDay <- seq(as.Date("2016-02-01"), length = 15, by = "1 month") - 1
+# DATA_DT <- as.character(lastDay[sample(1:length(lastDay), size = data.length, replace = T)])
+# BEGIN_DATE <- as.character(sample(seq(as.Date('2016/01/01'), as.Date('2017/03/31'), by = "day"), data.length))
+# 
+# RELOAN <- runif(data.length, 1, 10)
+# CNT <- floor(runif(data.length, 1, 1000))
+# BAL <- runif(data.length, 1, 10000)
+# OD_AMT <- runif(data.length, 1, 10000)
+# AP_AMT <- runif(data.length, 1, 10000)
+# SP_AMT <- runif(data.length, 1, 10000)
+# NEW_AMT <- runif(data.length, 1, 10000)
+# OD_PRINCIPAL <- runif(data.length, 1, 10000)
+# 
+# type.five <- c(0:4)
+# type.four <- c(0:3)
+# type.three <- c(0:2)
+# type.two <- c(0:1)
+# type.minus <- c(-1:3)
+# 
+# OVERDUE_STATUS_5 <- type.five[sample(1:length(type.five), size = data.length, replace = T)]
+# OVERDUE_STATUS_5_LAST <- type.five[sample(1:length(type.five), size = data.length, replace = T)]
+# 
+# OVERDUE_STATUS_3 <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
+# OVERDUE_STATUS_3_LAST <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
+# 
+# NEW_LOAN <- type.two[sample(1:length(type.two), size = data.length, replace = T)]
+# 
+# STATUS_LAST_MONTH <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
+# STATUS_THIS_MONTH <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
+# 
+# MATURITY_DAYS <- type.four[sample(1:length(type.minus), size = data.length, replace = T)]
+# 
+# OVERDUE_DAYS <- type.five[sample(1:length(type.five), size = data.length, replace = T)]
+# 
+# OVERDUE_FLAG <- type.two[sample(1:length(type.two), size = data.length, replace = T)]
+# 
+# data.test <- data.frame(DATA_DT, OVERDUE_STATUS_5, OVERDUE_STATUS_5_LAST, OVERDUE_STATUS_3, OVERDUE_STATUS_3_LAST,
+#                  NEW_LOAN, RELOAN, STATUS_LAST_MONTH, STATUS_THIS_MONTH, MATURITY_DAYS, OVERDUE_DAYS, OVERDUE_FLAG,
+#                  BEGIN_DATE, CNT, BAL, OD_AMT, AP_AMT, SP_AMT, NEW_AMT, OD_PRINCIPAL)
 
-RELOAN <- runif(data.length, 1, 10)
-CNT <- floor(runif(data.length, 1, 1000))
-BAL <- runif(data.length, 1, 10000)
-OD_AMT <- runif(data.length, 1, 10000)
-AP_AMT <- runif(data.length, 1, 10000)
-SP_AMT <- runif(data.length, 1, 10000)
-NEW_AMT <- runif(data.length, 1, 10000)
-OD_PRINCIPAL <- runif(data.length, 1, 10000)
 
-type.five <- c(0:4)
-type.four <- c(0:3)
-type.three <- c(0:2)
-type.two <- c(0:1)
-type.minus <- c(-1:3)
-
-OVERDUE_STATUS_5 <- type.five[sample(1:length(type.five), size = data.length, replace = T)]
-OVERDUE_STATUS_5_LAST <- type.five[sample(1:length(type.five), size = data.length, replace = T)]
-
-OVERDUE_STATUS_3 <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
-OVERDUE_STATUS_3_LAST <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
-
-NEW_LOAN <- type.two[sample(1:length(type.two), size = data.length, replace = T)]
-
-STATUS_LAST_MONTH <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
-STATUS_THIS_MONTH <- type.three[sample(1:length(type.three), size = data.length, replace = T)]
-
-MATURITY_DAYS <- type.four[sample(1:length(type.minus), size = data.length, replace = T)]
-
-OVERDUE_DAYS <- type.five[sample(1:length(type.five), size = data.length, replace = T)]
-
-OVERDUE_FLAG <- type.two[sample(1:length(type.two), size = data.length, replace = T)]
-
-data.test <- data.frame(DATA_DT, OVERDUE_STATUS_5, OVERDUE_STATUS_5_LAST, OVERDUE_STATUS_3, OVERDUE_STATUS_3_LAST,
-                 NEW_LOAN, RELOAN, STATUS_LAST_MONTH, STATUS_THIS_MONTH, MATURITY_DAYS, OVERDUE_DAYS, OVERDUE_FLAG,
-                 BEGIN_DATE, CNT, BAL, OD_AMT, AP_AMT, SP_AMT, NEW_AMT, OD_PRINCIPAL)
-
-
-library(dplyr)
-library(tidyr)
-library(lubridate)
-library(sca)
 
 # 资金变化 Output: table.1.cnt; table.1.amt
 # part.1 cnt
@@ -108,7 +109,7 @@ table.1.amt$DIFF <- table.1.amt$`DIFF_OD_AMT.1-1` - table.1.amt$x
 # sum amt 
 table.1.amt$DIFFAMT <- apply(table.1.amt[2:9], 1, sum)
 table.1.amt$DATA_DT <- paste(month(as.Date(table.1.amt$DATA_DT) %m-% months(1)), month(table.1.amt$DATA_DT), sep = "-") %>%
-  paste(c("汇总"), sep = "")
+  paste(c("月汇总"), sep = "")
 
 
 # 续贷逾期情况 Output: table.2
@@ -125,7 +126,6 @@ table.2.part.4.firstLoan <- aggregate(OD_AMT~DATA_DT, subset(data.table.2, RELOA
 
 table.2.firstLoan <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.2.part.1.firstLoan, table.2.part.2.firstLoan,
                                                                table.2.part.3.firstLoan, table.2.part.4.firstLoan))
-# !!!!!!精度控制
 table.2.firstLoan$Ratio <-  percent(table.2.firstLoan$OD_AMT/table.2.firstLoan$BAL, d= 2)
 
 # reloan > 1
@@ -139,7 +139,6 @@ table.2.part.4.reLoan <- aggregate(OD_AMT~DATA_DT, subset(data.table.2, RELOAN !
 
 table.2.reLoan <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.2.part.1.reLoan, table.2.part.2.reLoan,
                                                                                     table.2.part.3.reLoan, table.2.part.4.reLoan))
-# !!!!!!精度控制
 table.2.reLoan$Ratio <- percent(table.2.reLoan$OD_AMT/table.2.reLoan$BAL, d = 2)
 
 # all
@@ -166,24 +165,25 @@ table.2 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.
 
 table.2$DATA_DT <- substr(table.2$DATA_DT, 1, 7)
 
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # 还款情况 Output: table.3
-data.table.3 <- arrange(risk.data.all[c("DATA_DT", "SP_AMT", "AP_AMT", "OVERDUE_STATUS_3")], DATA_DT)
+data.table.3 <- arrange(risk.data.all[c("DATA_DT", "DIFF_SP_AMT", "DIFF_AP_AMT", "OVERDUE_STATUS_3", "OVERDUE_STATUS_3_LAST")], DATA_DT)
 
-table.3.part.1 <- aggregate(SP_AMT~DATA_DT, data.table.3, FUN = "sum")
-table.3.part.2 <- aggregate(AP_AMT~DATA_DT, data.table.3, FUN = "sum")
-table.3.part.3 <- aggregate(SP_AMT~DATA_DT, subset(data.table.3, OVERDUE_STATUS_3 == 1), FUN = "sum")
-table.3.part.4 <- aggregate(AP_AMT~DATA_DT, subset(data.table.3, OVERDUE_STATUS_3 == 1), FUN = "sum")
+table.3.part.1 <- aggregate(DIFF_SP_AMT~DATA_DT, data.table.3, FUN = "sum")
+table.3.part.2 <- aggregate(DIFF_AP_AMT~DATA_DT, data.table.3, FUN = "sum")
+table.3.part.3 <- aggregate(DIFF_SP_AMT~DATA_DT, subset(data.table.3, OVERDUE_STATUS_3 == 1 | OVERDUE_STATUS_3_LAST ==1), FUN = "sum")
+table.3.part.4 <- aggregate(DIFF_AP_AMT~DATA_DT, subset(data.table.3, OVERDUE_STATUS_3 == 1 | OVERDUE_STATUS_3_LAST == 1), FUN = "sum")
 
 table.3 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.3.part.1, table.3.part.2,
                                                                           table.3.part.3, table.3.part.4))
 
+
 # 迁徙率月度情况 Output: table.4.1; table.4.2
 data.table.4 <- arrange(risk.data.all[c("DATA_DT", "OVERDUE_STATUS_5", "OVERDUE_STATUS_5_LAST" ,"CNT")], DATA_DT)
 
-table.4.1 <- arrange(aggregate(data.table.4$CNT, by = list(DATA_DT = DATA_DT, OVERDUE_STATUS_5 = OVERDUE_STATUS_5), FUN = "sum") %>%
+table.4.1 <- arrange(aggregate(CNT~DATA_DT+OVERDUE_STATUS_5, data.table.4, FUN = "sum") %>%
   reshape(idvar = "DATA_DT", timevar = "OVERDUE_STATUS_5", direction = "wide"), DATA_DT)
-table.4.1[is.na(table.4.1)] <- 0
-table.4.1$regular <- table.4.1$x.0 + table.4.1$x.1
+table.4.1$regular <- table.4.1$CNT.0 + table.4.1$CNT.1
 
 
 data.table.4.2 <- na.omit(subset(data.table.4, (OVERDUE_STATUS_5_LAST == 0 | OVERDUE_STATUS_5_LAST == 1) &
@@ -210,32 +210,41 @@ table.4.part.6 <- arrange(setNames(aggregate(data.table.4.6$CNT, data.table.4.6[
 table.4.2 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.4.part.2,
                                                                           table.4.part.3, table.4.part.4,
                                                                           table.4.part.5, table.4.part.6))
-table.4.1[is.na(table.4.part.1)] <- 0
+table.4.1[is.na(table.4.1)] <- 0
 table.4.2[is.na(table.4.2)] <- 0
 
-table.4.2$rate.1 <- table.4.2$`0-1`/table.4.part.1$regular[-nrow(table.4.part.1)]
-table.4.2$rate.2 <- table.4.2$`2-3`/table.4.part.1$x.2[-nrow(table.4.part.1)]
-table.4.2$rate.3 <- table.4.2$`2-4`/table.4.part.1$x.2[-nrow(table.4.part.1)]
-table.4.2$rate.4 <- table.4.2$`3-4`/table.4.part.1$x.3[-nrow(table.4.part.1)]
-table.4.2$rate.5 <- table.4.2$`4-4`/table.4.part.1$x.4[-nrow(table.4.part.1)]
+table.4.2$rate.1 <- percent(table.4.2$`0-1`/table.4.1$regular[-nrow(table.4.1)], d = 2)
+table.4.2$rate.2 <- percent(table.4.2$`2-3`/table.4.1$CNT.2[-nrow(table.4.1)], d = 2)
+table.4.2$rate.3 <- percent(table.4.2$`2-4`/table.4.1$CNT.2[-nrow(table.4.1)], d = 2)
+table.4.2$rate.4 <- percent(table.4.2$`3-4`/table.4.1$CNT.3[-nrow(table.4.1)], d = 2)
+table.4.2$rate.5 <- percent(table.4.2$`4-4`/table.4.1$CNT.4[-nrow(table.4.1)], d = 2)
+
+table.4.1$DATA_DT <- substr(table.4.1$DATA_DT, 1, 7)
+table.4.2$DATA_DT <- paste(month(as.Date(table.4.2$DATA_DT) %m-% months(1)), month(table.4.2$DATA_DT), sep = "-") %>%
+  paste(c("月汇总"), sep = "")
+
+# 资产情况月度分析  Output: table.5.1; table.5.2
+data.table.5 <- arrange(risk.data.all[c("BEGIN_DATE", "OVERDUE_STATUS_3", "OD_AMT", "LOAN_M_CNT", "RELOAN", "NEW_AMT")], BEGIN_DATE)
+data.table.5$LOAN_M_CNT <- substr(data.table.5$LOAN_M_CNT, 1, 7)
+
+table.5.1.1 <- arrange(aggregate(NEW_AMT~BEGIN_DATE, data.table.5, FUN = "sum"), BEGIN_DATE)
 
 
-# 资产情况月度分析  Output: table.5.part.1; table.5.part.2; table.5.part.3
-data.table.5 <- arrange(risk.data.all[c("DATA_DT", "OVERDUE_STATUS_3", "OD_AMT", "BEGIN_DATE", "RELOAN", "NEW_AMT")], DATA_DT)
-data.table.5$BEGIN_DATE <- substr(data.table.5$BEGIN_DATE, 1, 7)
+table.5.1.2 <- arrange(aggregate(OD_AMT~BEGIN_DATE+LOAN_M_CNT,
+                                 subset(data.table.5, BEGIN_DATE >= as.Date("2016-01-01")), FUN = "sum"), BEGIN_DATE, LOAN_M_CNT)# %>%
+table.5.1.2<- setNames(reshape(table.5.1.2, idvar = "BEGIN_DATE", timevar = "LOAN_M_CNT", direction = "wide"),
+                       c("BEGIN_DATE", unique(table.5.1.2$LOAN_M_CNT)))
 
-table.5.part.1.1 <- arrange(aggregate(NEW_AMT~DATA_DT, data.table.5, FUN = "sum"), DATA_DT)
-table.5.part.1.2 <- arrange(aggregate(OD_AMT~DATA_DT+BEGIN_DATE, data.table.5, FUN = "sum"), DATA_DT, BEGIN_DATE) %>%
-  reshape(idvar = "DATA_DT", timevar = "BEGIN_DATE", direction = "wide")
-table.5.part.1 <- merge(table.5.part.1.1, table.5.part.1.2, all = T)
 
-table.5.part.2 <- cbind(table.5.part.1[,1:2], table.5.part.1[,-1:-2]/table.5.part.1$NEW_AMT)
 
-table.5.part.3.1 <- arrange(aggregate(NEW_AMT~DATA_DT, subset(data.table.5, RELOAN > 1), FUN = "sum"), DATA_DT)
-table.5.part.3.2 <- arrange(aggregate(OD_AMT~DATA_DT+BEGIN_DATE, subset(data.table.5, RELOAN > 1), FUN = "sum"), DATA_DT) %>%
-  reshape(idvar = "DATA_DT", timevar = "BEGIN_DATE", direction = "wide")
-table.5.part.3 <- merge(table.5.part.3.1, table.5.part.3.2, all = T)
-table.5.part.3 <- cbind(table.5.part.3[,1:2], table.5.part.3[,-1:-2]/table.5.part.3$NEW_AMT)
+table.5.1 <- merge(table.5.1.1, table.5.1.2, all = T)
+table.5.1 <- table.5.1[which(table.5.1$NEW_AMT != 0),]
+
+
+table.5.2 <- cbind(table.5.1[,1:2], table.5.1[,-1:-2]/table.5.1$NEW_AMT)
+
+table.5.1$BEGIN_DATE <- substr(table.5.1$BEGIN_DATE, 1, 7)
+table.5.2$BEGIN_DATE <- substr(table.5.2$BEGIN_DATE, 1, 7)
 
 # 终止和到期情况 Output: table.6.all; table.6.ex
 # 到期？？？MATURITY_DAYS
@@ -244,35 +253,37 @@ index.table.6 <- function(x){
   
   table.6.part.1 <- arrange(aggregate(CNT~DATA_DT, subset(data.table.6, OVERDUE_STATUS_3 == 1), FUN = "sum"), DATA_DT)
   table.6.part.2 <- arrange(aggregate(OD_AMT~DATA_DT, subset(data.table.6, OVERDUE_STATUS_3 == 1), FUN = "sum"), DATA_DT)
-  table.6.part.3 <- arrange(aggregate(CNT~DATA_DT, subset(data.table.6, MATURITY_DAYS != -1), FUN = "sum"), DATA_DT)
-  table.6.part.4 <- arrange(aggregate(OD_AMT~DATA_DT, subset(data.table.6, MATURITY_DAYS != -1), FUN = "sum"), DATA_DT)
+  table.6.part.3 <- arrange(aggregate(CNT~DATA_DT, subset(data.table.6, MATURITY_DAYS != -1 & OVERDUE_STATUS_3 != 2), FUN = "sum"), DATA_DT)
+  table.6.part.4 <- arrange(aggregate(OD_AMT~DATA_DT, subset(data.table.6, MATURITY_DAYS != -1 & OVERDUE_STATUS_3 != 2), FUN = "sum"), DATA_DT)
   table.6.part.5 <- arrange(aggregate(CNT~DATA_DT, subset(data.table.6, STATUS_THIS_MONTH == 1), FUN = "sum"), DATA_DT)
   table.6.part.6 <- arrange(aggregate(OD_AMT~DATA_DT, subset(data.table.6, STATUS_THIS_MONTH == 1), FUN = "sum"), DATA_DT)
   table.6 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.6.part.1, table.6.part.2, table.6.part.3,
                                                                             table.6.part.4, table.6.part.5, table.6.part.6))
+  table.6$DATA_DT <- substr(table.6$DATA_DT, 1, 7)
+  return(table.6)
 }
 table.6.all <- index.table.6(risk.data.all)
 table.6.ex <- index.table.6(risk.data.ex)
 
 
 # 资产结构类数据 Output: table.7.1; table.7.2; table.7.3
-table.7.part.1 <- table.4.part.1
+table.7.part.1 <- table.4.1
 table.7.part.1$sum <- apply(table.7.part.1[,2:6], 1, sum)
-table.7.part.1$type0 <- table.7.part.1$regular/table.7.part.1$sum
-table.7.part.1$type1 <- table.7.part.1$x.2/table.7.part.1$sum
-table.7.part.1$type2 <- table.7.part.1$x.3/table.7.part.1$sum
-table.7.part.1$type3 <- table.7.part.1$x.4/table.7.part.1$sum
+table.7.part.1$type0 <- percent(table.7.part.1$regular/table.7.part.1$sum, d = 2)
+table.7.part.1$type1 <- percent(table.7.part.1$CNT.2/table.7.part.1$sum, d = 2)
+table.7.part.1$type2 <- percent(table.7.part.1$CNT.3/table.7.part.1$sum, d = 2)
+table.7.part.1$type3 <- percent(table.7.part.1$CNT.4/table.7.part.1$sum, d = 2)
 table.7.1 <- table.7.part.1[,-2:-8]
 
-data.table.7 <- risk.data.all[c("DATA_DT", "OD_AMT", "OVERDUE_STATUS_3")]
+data.table.7 <- risk.data.all[c("DATA_DT", "OD_AMT", "OVERDUE_STATUS_5")]
 
-table.7.part.2 <- arrange(aggregate(OD_AMT~DATA_DT+OVERDUE_STATUS_3, data.table.7, FUN = "sum"), DATA_DT, OVERDUE_STATUS_3) %>%
-  reshape(idvar = "DATA_DT", timevar = "OVERDUE_STATUS_3", direction = "wide")
+table.7.part.2 <- arrange(aggregate(OD_AMT~DATA_DT+OVERDUE_STATUS_5, subset(data.table.7, OVERDUE_STATUS_5 != 0 & OVERDUE_STATUS_5 != 1), FUN = "sum"), DATA_DT, OVERDUE_STATUS_5) %>%
+  reshape(idvar = "DATA_DT", timevar = "OVERDUE_STATUS_5", direction = "wide")
 table.7.part.2[is.na(table.7.part.2)] <- 0
 table.7.part.2$sum <- apply(table.7.part.2[,2:4], 1, sum)
-table.7.part.2$type0 <- table.7.part.2$OD_AMT.0/table.7.part.2$sum
-table.7.part.2$type1 <- table.7.part.2$OD_AMT.1/table.7.part.2$sum
-table.7.part.2$type2 <- table.7.part.2$OD_AMT.2/table.7.part.2$sum
+table.7.part.2$type0 <- percent(table.7.part.2$OD_AMT.2/table.7.part.2$sum, d = 2)
+table.7.part.2$type1 <- percent(table.7.part.2$OD_AMT.3/table.7.part.2$sum, d = 2)
+table.7.part.2$type2 <- percent(table.7.part.2$OD_AMT.4/table.7.part.2$sum, d = 2)
 table.7.2 <- table.7.part.2[, -2:-5]
 
 data.table.7.3 <- arrange(risk.data.all[c("DATA_DT", "OVERDUE_STATUS_3", "OVERDUE_STATUS_5", "CNT", "SP_AMT", "OD_PRINCIPAL", "OD_AMT", "BAL")] %>%
@@ -306,19 +317,25 @@ table.7.part.3.7 <- arrange(aggregate(Ratio.AMT~DATA_DT+OVERDUE_STATUS_5, data.t
 
 table.7.3 <- Reduce(function(x,y) merge(x,y, all = T), list(table.7.part.3.1, table.7.part.3.2, table.7.part.3.3, table.7.part.3.4,
                                                                           table.7.part.3.5, table.7.part.3.6, table.7.part.3.7))
+summary.7.3 <- data.frame(t(sapply(split(table.7.3[,-1:-2], table.7.3$DATA_DT), function(x) lapply(x, sum))))
+# summary.7.3$CNT <- as.numeric(summary.7.3$CNT)
+
+diff.7.3 <- summary.7.3[-1,] - summary.7.3[-nrow(summary.7.3),]
+row.names(diff.7.3) <- row.names(summary.7.3)[-1]
+
+summary.7.3$DATA_DT <- row.names(summary.7.3)
+summary.7.3$OVERDUE_STATUS_5 <- NA
+summary.7.3 <- summary.7.3[,c(8:9,1:7)]
+table.7.3 <- arrange(rbind(table.7.3, summary.7.3), DATA_DT)
+
+
+
+table.7.3$Ratio.CNT <- percent(table.7.3$Ratio.CNT, d = 2)
+table.7.3$Ratio.AMT <- percent(table.7.3$Ratio.AMT, d = 2)
+
 
 # OUTPUT
-library(xlsx)
-write.xlsx(table.1.cnt, file = "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\output.xlsx", sheetName = "资金变化", row.names = F)
-
-addDataFrame(newTable, sheet = newSheet,
-             row.names = F, startRow = X)
-saveWorkbook(newSheet, "filepath")
-
-
-
 # template
-library(XLConnect)
 ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBR.xls"
 template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\bisRpts", Sys.Date(), ".xls")
 file.copy(ExcelFile, template)
@@ -326,19 +343,56 @@ file.copy(ExcelFile, template)
 # output to excel
 writeWorksheetToFile(template, data = table.1.cnt,
                      sheet = "资金变化", header = F,
-                     startRow = 2, startCol = 1)
+                     startRow = 2, startCol = 2)
 writeWorksheetToFile(template, data = c("金额"),
                      sheet = "资金变化", header = F,
-                     startRow = nrow(table.1.cnt) + 2, startCol = 1)
+                     startRow = nrow(table.1.cnt) + 2, startCol = 2)
 writeWorksheetToFile(template, data = table.1.amt,
                      sheet = "资金变化", header = F,
-                     startRow = nrow(table.1.cnt) + 3, startCol = 1)
+                     startRow = nrow(table.1.cnt) + 3, startCol = 2)
 writeWorksheetToFile(template, data = table.2,
                      sheet = "续贷逾期情况", header = F,
                      startRow = 4, startCol = 2)
 writeWorksheetToFile(template, data = table.3,
                      sheet = "还款情况", header = F,
                      startRow = 3, startCol = 3)
+writeWorksheetToFile(template, data = table.4.1,
+                     sheet = "迁徙率月度情况", header = F,
+                     startRow = 2, startCol = 2)
+writeWorksheetToFile(template, data = table.4.2,
+                     sheet = "迁徙率月度情况", header = F,
+                     startRow = 2, startCol = ncol(table.4.1)+2)
+writeWorksheetToFile(template, data = table.5.1,
+                     sheet = "资产情况月度分析", header = F,
+                     startRow = 4, startCol = 2)
+writeWorksheetToFile(template, data = table.5.2,
+                     sheet = "资产情况月度分析", header = F,
+                     startRow = nrow(table.5.1)+4, startCol = 2)
+writeWorksheetToFile(template, data = table.6.all,
+                     sheet = "终止和到期情况", header = F,
+                     startRow = 4, startCol = 2)
+writeWorksheetToFile(template, data = table.6.ex,
+                     sheet = "终止和到期情况", header = F,
+                     startRow = 4, startCol = ncol(table.6.all)+2)
+writeWorksheetToFile(template, data = table.7.1,
+                     sheet = "资产结构类数据", header = F,
+                     startRow = 3, startCol = 2)
+writeWorksheetToFile(template, data = c("金额比"),
+                     sheet = "资产结构类数据", header = F,
+                     startRow = nrow(table.7.1) + 3, startCol = 2)
+writeWorksheetToFile(template, data = c("month", "一般", "一般", "催收", "严重"),
+                     sheet = "资产结构类数据", header = F,
+                     startRow = nrow(table.7.1) + 4, startCol = 2)
+writeWorksheetToFile(template, data = table.7.2,
+                     sheet = "资产结构类数据", header = F,
+                     startRow = nrow(table.7.1) + 5, startCol = 2)
+writeWorksheetToFile(template, data = c("状态", "未结清户数", "占比", "应还总额", "逾期本金", "逾期总额", "余额", "占比"),
+                     sheet = "资产结构类数据", header = F,
+                     startRow = nrow(table.7.1) + nrow(table.7.1) + 6, startCol = 2)
+writeWorksheetToFile(template, data = table.7.3,
+                     sheet = "资产结构类数据", header = F,
+                     startRow = nrow(table.7.1) + nrow(table.7.1) + 6, startCol = 2)
+
 
 
 

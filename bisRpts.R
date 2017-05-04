@@ -251,15 +251,15 @@ table.7.part.2$type2 <- percent(table.7.part.2$OD_AMT.4/table.7.part.2$sum, d = 
 table.7.2 <- table.7.part.2[, -2:-5]
 table.7.2$DATA_DT <- substr(table.7.2$DATA_DT, 1, 7)
 
-data.table.7.3 <- arrange(risk.data.all[c("DATA_DT", "OVERDUE_STATUS_3", "OVERDUE_STATUS_5", "CNT", "SP_AMT", "OD_PRINCIPAL", "OD_AMT", "BAL")] %>%
+data.table.7.3 <- arrange(risk.data.all[c("DATA_DT", "OVERDUE_STATUS_3", "OVERDUE_STATUS_5", "CNT", "OD_PRINCIPAL", "OD_AMT", "BAL")] %>%
   subset(OVERDUE_STATUS_3 != 2 & as.Date(DATA_DT) >= as.Date('2017-01-01')), DATA_DT)
 
 combined.1 <- subset(data.table.7.3, OVERDUE_STATUS_5 == 0 | OVERDUE_STATUS_5 == 1)
-combined.1 <- aggregate(combined.1[,4:8], by = combined.1["DATA_DT"], sum)
+combined.1 <- aggregate(combined.1[,4:7], by = combined.1["DATA_DT"], sum)
 combined.1 <- as.data.frame(append(combined.1, list(OVERDUE_STATUS_5 = 0), after = 1))
 
 combined.2 <- subset(data.table.7.3, OVERDUE_STATUS_5 != 0 & OVERDUE_STATUS_5 != 1)
-combined.2 <- aggregate(combined.2[,4:8], by = list(DATA_DT = combined.2$DATA_DT, OVERDUE_STATUS_5 = combined.2$OVERDUE_STATUS_5), sum)
+combined.2 <- aggregate(combined.2[,4:7], by = list(DATA_DT = combined.2$DATA_DT, OVERDUE_STATUS_5 = combined.2$OVERDUE_STATUS_5), sum)
 
 data.table.7.3 <- arrange(rbind(combined.1, combined.2), DATA_DT)
 data.table.7.3.sumCNT <-setNames(aggregate(CNT~DATA_DT, data.table.7.3, FUN = "sum"), c("DATA_DT", "sumCNT"))
@@ -273,14 +273,13 @@ data.table.7.3 <- as.data.frame(append(data.table.7.3, list(Ratio.AMT = data.tab
 table.7.part.3.1  <- arrange(aggregate(CNT~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
 table.7.part.3.1[is.na(table.7.part.3.1)] <- 0
 table.7.part.3.2 <- arrange(aggregate(Ratio.CNT~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
-table.7.part.3.3 <- arrange(aggregate(SP_AMT~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
 table.7.part.3.4 <- arrange(aggregate(OD_PRINCIPAL~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
 table.7.part.3.5 <- arrange(aggregate(OD_AMT~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
 table.7.part.3.6 <- arrange(aggregate(BAL~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
 table.7.part.3.6[is.na(table.7.part.3.5)] <- 0
 table.7.part.3.7 <- arrange(aggregate(Ratio.AMT~DATA_DT+OVERDUE_STATUS_5, data.table.7.3, FUN = "sum"), DATA_DT)
 
-table.7.3 <- Reduce(function(x,y) merge(x,y, all = T), list(table.7.part.3.1, table.7.part.3.2, table.7.part.3.3, table.7.part.3.4,
+table.7.3 <- Reduce(function(x,y) merge(x,y, all = T), list(table.7.part.3.1, table.7.part.3.2, table.7.part.3.4,
                                                                           table.7.part.3.5, table.7.part.3.6, table.7.part.3.7))
 
 summary.7.3 <- aggregate(table.7.3[,-1:-2], by = table.7.3["DATA_DT"], FUN = "sum")
@@ -299,12 +298,12 @@ summary.7.3$OVERDUE_STATUS_5 <- c("汇总")
 summary.7.3$Ratio.CNT <- percent(summary.7.3$Ratio.CNT, d = 2)
 summary.7.3$Ratio.AMT <- percent(summary.7.3$Ratio.AMT, d = 2)
 sum.diff.7.3 <- rbind(summary.7.3, diff.7.3)
-sum.diff.7.3 <- sum.diff.7.3[,c(1,9,2:8)]
+sum.diff.7.3 <- sum.diff.7.3[,c(1,8,2:7)]
 table.7.3 <- arrange(rbind(table.7.3, sum.diff.7.3),DATA_DT)
 table.7.3$DATA_DT <- substr(table.7.3$DATA_DT, 1, 7)
 colnames(table.7.1) <- c("month", "正常", "一般", "催收", "严重")
 colnames(table.7.2) <- c("month", "一般", "催收", "严重")
-colnames(table.7.3) <- c("month", "状态", "未结清户数", "占比", "应还总额", "逾期本金", "逾期总额", "余额", "占比")
+colnames(table.7.3) <- c("month", "状态", "未结清户数", "占比", "逾期本金", "逾期总额", "余额", "占比")
 
 # OUTPUT
 # template

@@ -11,7 +11,6 @@ channel <- odbcConnect("OracleInstantClient", uid = "zhangj", pwd = "zhangj1234"
 
 risk.data.all <- sqlQuery(channel, 'select * from THBL.RISK_STATISTICS_ALL')
 coding <- sqlQuery(channel, 'select * from THBL.RISK_DIMENSION')
-# risk.data.ex <- sqlQuery(channel, 'select * from THBL.RISK_STATISTICS_EX')
 
 risk.data.all$DATA_DT <- as.Date(risk.data.all$DATA_DT)
 
@@ -194,7 +193,7 @@ table.5.1.1 <- arrange(aggregate(NEW_AMT~BEGIN_DATE, data.table.5, FUN = "sum"),
 
 
 table.5.1.2 <- arrange(aggregate(OD_AMT~BEGIN_DATE+LOAN_M_CNT,
-                                 subset(data.table.5, BEGIN_DATE >= min(data.table.5$DATA_DT)), FUN = "sum"), BEGIN_DATE, LOAN_M_CNT) %>%
+                                 subset(data.table.5, BEGIN_DATE >= min(data.table.5$DATA_DT)), FUN = "sum"), BEGIN_DATE, as.numeric(LOAN_M_CNT)) %>%
   reshape(idvar = "BEGIN_DATE", timevar = "LOAN_M_CNT", direction = "wide")
 
 table.5.1 <- merge(table.5.1.1, table.5.1.2, all.y = T)
@@ -227,7 +226,6 @@ index.table.6 <- function(x){
   return(table.6)
 }
 table.6.all <- index.table.6(risk.data.all)
-table.6.ex <- index.table.6(risk.data.ex)
 
 
 # 资产结构类数据 Output: table.7.1; table.7.2; table.7.3
@@ -308,7 +306,7 @@ colnames(table.7.3) <- c("month", "状态", "未结清户数", "占比", "逾期
 # OUTPUT
 # template
 ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBR.xls"
-template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\bisRpts", Sys.Date(), ".xls")
+template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\bisRpts_all_", Sys.Date(), ".xls")
 file.copy(ExcelFile, template)
 
 # output to excel
@@ -342,9 +340,6 @@ writeWorksheetToFile(template, data = table.5.2,
 writeWorksheetToFile(template, data = table.6.all,
                      sheet = "终止和到期情况", header = F,
                      startRow = 4, startCol = 1)
-writeWorksheetToFile(template, data = table.6.ex,
-                     sheet = "终止和到期情况", header = F,
-                     startRow = 4, startCol = ncol(table.6.all) + 2)
 writeWorksheetToFile(template, data = table.7.1,
                      sheet = "资产结构类数据", header = T,
                      startRow = 2, startCol = 1)

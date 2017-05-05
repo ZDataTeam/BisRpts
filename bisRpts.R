@@ -210,7 +210,6 @@ colnames(table.5.1) <- c("新增放款月份", "新增放款金额", "当月", n
 colnames(table.5.2) <- colnames(table.5.1)
 
 # 终止和到期情况 Output: table.6.all; table.6.ex
-# 到期？？？MATURITY_DAYS
 index.table.6 <- function(x){
   data.table.6 <- arrange(x[c("DATA_DT", "OVERDUE_STATUS_3", "CNT", "OD_AMT", "MATURITY_DAYS", "STATUS_THIS_MONTH")], DATA_DT)
   

@@ -11,11 +11,34 @@ channel <- odbcConnect("OracleInstantClient", uid = "zhangj", pwd = "zhangj1234"
 
 risk.data.all <- sqlQuery(channel, 'select * from THBL.RISK_STATISTICS_ALL')
 coding <- sqlQuery(channel, 'select * from THBL.RISK_DIMENSION')
+data.11.1 <- sqlQuery(channel, 'SELECT DATA_DT,
+                      COUNT(DISTINCT MCHT_CD) AS RELOAN_MCHT_CNT 
+                      FROM THBL.TEMP_RISK_STAT_LAST 
+                      where reloan > 1 
+                      GROUP BY DATA_DT')
+data.11.2 <- sqlQuery(channel, 'SELECT DATA_DT,
+                      COUNT(DISTINCT MCHT_CD) AS FINISHED_MCHT
+                      FROM THBL.TEMP_RISK_STAT_LAST 
+                      where overdue_status_3 = 2  
+                      GROUP BY DATA_DT')
+data.11.3 <- sqlQuery(channel, 'SELECT DATA_DT, PROV_CD,
+                      COUNT(DISTINCT MCHT_CD) AS RELOAN_MCHT_CNT 
+                      FROM THBL.TEMP_RISK_STAT_LAST 
+                      where reloan > 1 
+                      GROUP BY DATA_DT, PROV_CD')
+data.11.4 <- sqlQuery(channel, 'SELECT DATA_DT, PROV_CD,
+                      COUNT(DISTINCT MCHT_CD) AS FINISHED_MCHT
+                      FROM THBL.TEMP_RISK_STAT_LAST 
+                      where overdue_status_3 = 2  
+                      GROUP BY DATA_DT, PROV_CD')
+
 
 risk.data.all$DATA_DT <- as.Date(risk.data.all$DATA_DT)
 
 odbcClose(channel)
 
+prov <- subset(coding, COL == "PROV_CD")
+city <- subset(coding, COL == "SHENGSHI_CD")
 
 # 资金变化 Output: table.1.cnt; table.1.amt
 # part.1 cnt
@@ -68,7 +91,7 @@ table.1.amt$DATA_DT <- paste(month(as.Date(table.1.amt$DATA_DT) %m-% months(1)),
   paste(c("月汇总"), sep = "")
 
 
-# 续贷逾期情况 Output: table.2
+# 续贷逾期情况 Output: table.2; table.2.1
 # reloan == 1
 data.table.2 <- arrange(risk.data.all[c("DATA_DT", "RELOAN", "OVERDUE_STATUS_3", "CNT", "BAL", "OD_AMT", "MATURITY_DAYS")], DATA_DT)
 
@@ -121,7 +144,80 @@ table.2 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.
 
 table.2$DATA_DT <- substr(table.2$DATA_DT, 1, 7)
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# reloan == 1
+data.table.2.1 <- subset(risk.data.all[c("DATA_DT", "PROV_CD", "RELOAN", "OVERDUE_STATUS_3", "CNT", "BAL", "OD_AMT", "MATURITY_DAYS")], DATA_DT == as.Date("2017-03-30"))
+
+table.2.1.firstLoan <- aggregate(CNT~PROV_CD, subset(data.table.2.1, RELOAN == 1 & OVERDUE_STATUS_3 != 2), FUN = "sum")
+
+table.2.2.firstLoan <- aggregate(CNT~PROV_CD, subset(data.table.2.1, RELOAN == 1 & OVERDUE_STATUS_3 == 1), FUN = "sum")
+
+table.2.3.firstLoan <- aggregate(BAL~PROV_CD, subset(data.table.2.1, RELOAN == 1), FUN = "sum")
+
+table.2.4.firstLoan <- aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, RELOAN == 1), FUN = "sum")
+
+table.2.1.firstLoan <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.2.1.firstLoan, table.2.2.firstLoan,
+                                                                                    table.2.3.firstLoan, table.2.4.firstLoan))
+table.2.1.firstLoan[is.na(table.2.1.firstLoan)] <- 0
+
+table.2.1.firstLoan$Ratio <-  percent(table.2.1.firstLoan$OD_AMT/table.2.1.firstLoan$BAL, d= 2)
+
+# reloan > 1
+table.2.1.reLoan <- aggregate(CNT~PROV_CD, subset(data.table.2.1, RELOAN != 1 & OVERDUE_STATUS_3 != 2), FUN = "sum")
+
+table.2.2.reLoan <- aggregate(CNT~PROV_CD, subset(data.table.2.1, RELOAN != 1 & OVERDUE_STATUS_3 == 1), FUN = "sum")
+
+table.2.3.reLoan <- aggregate(BAL~PROV_CD, subset(data.table.2.1, RELOAN != 1), FUN = "sum")
+
+table.2.4.reLoan <- aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, RELOAN != 1), FUN = "sum")
+
+table.2.1.reLoan <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.2.1.reLoan, table.2.2.reLoan,
+                                                                                 table.2.3.reLoan, table.2.4.reLoan))
+table.2.1.reLoan[is.na(table.2.1.reLoan)] <- 0
+
+table.2.1.reLoan$Ratio <- percent(table.2.1.reLoan$OD_AMT/table.2.1.reLoan$BAL, d = 2)
+
+# all
+table.2.1.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, OVERDUE_STATUS_3 != 2), FUN = "sum"), c("PROV_CD", "CNT.1"))
+
+table.2.2.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, OVERDUE_STATUS_3 == 1), FUN = "sum"), c("PROV_CD", "CNT.2"))
+
+table.2.3.allLoan <- setNames(aggregate(BAL~PROV_CD, data.table.2.1, FUN = "sum"), c("PROV_CD", "BAL.1"))
+
+table.2.4.allLoan <- setNames(aggregate(OD_AMT~PROV_CD, data.table.2.1, FUN = "sum"), c("PROV_CD", "OD_AMT.1"))
+
+table.2.5.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS > 0 & OVERDUE_STATUS_3 != 2), FUN = "sum"), c("PROV_CD", "CNT.3"))
+
+table.2.6.allLoan <- setNames(aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS > 0), FUN = "sum"), c("PROV_CD", "OD_AMT.2"))
+
+table.2.7.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS == 3 & OVERDUE_STATUS_3 != 2), FUN = "sum"), c("PROV_CD", "CNT.4"))
+
+table.2.8.allLoan <- setNames(aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS == 3), FUN = "sum"), c("PROV_CD", "OD_AMT.3"))
+
+table.2.1.allLoan <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.2.1.allLoan, table.2.2.allLoan,
+                                                                                  table.2.3.allLoan, table.2.4.allLoan,
+                                                                                  table.2.5.allLoan, table.2.6.allLoan,
+                                                                                  table.2.7.allLoan, table.2.8.allLoan))
+table.2.1.allLoan[is.na(table.2.1.allLoan)] <- 0
+
+table.2.1 <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.2.1.firstLoan, table.2.1.reLoan, table.2.1.allLoan))
+table.2.1[is.na(table.2.1)] <- 0
+
+table.2.1 <- merge(prov[,-1], table.2.1, by.x = "CODE", by.y = "PROV_CD", all.y = T)
+
+table.2.1.total <- sapply(table.2.1[,c(3:6, 8:11, 13:20)], sum)
+
+table.2.1 <- rbind(table.2.1, c(NA, NA, table.2.1.total[1:4], NA, table.2.1.total[5:8], NA, table.2.1.total[9:16]))
+table.2.1[nrow(table.2.1), 7] <- percent(table.2.1[nrow(table.2.1), 6]/table.2.1[nrow(table.2.1), 5], d = 2)
+table.2.1[nrow(table.2.1), 12] <- percent(table.2.1[nrow(table.2.1), 11]/table.2.1[nrow(table.2.1), 10], d = 2)
+
+table.2.1 <- data.frame(append(table.2.1, list(ODRATE = percent(table.2.1$OD_AMT.1/table.2.1$BAL.1, d = 2)), after = 16))
+table.2.1 <- data.frame(append(table.2.1, list(BORATE = percent(table.2.1$OD_AMT.2/table.2.1$BAL.1, d = 2)), after = 19))
+table.2.1 <- data.frame(append(table.2.1, list(BNRATE = percent(table.2.1$OD_AMT.3/table.2.1$BAL.1, d = 2)), after = 22))
+
+names(table.2.1) <- c("公司ID", "CORP", "首贷数量", "首贷逾期数", "首贷余额", "首贷逾期金额", "首贷逾期率", "续贷数量", "续贷逾期数",
+                      "续贷余额", "续贷逾期金额", "续贷逾期率", "未结清数", "保理逾期户数", "省余额", "保理逾期金额", "保理逾期率",
+                      "银行逾期户数", "银行逾期金额", "银行逾期率", "银行不良户数", "银行不良金额", "银行不良率")
+
 # 还款情况 Output: table.3
 data.table.3 <- arrange(risk.data.all[c("DATA_DT", "DIFF_SP_AMT", "DIFF_AP_AMT", "OVERDUE_STATUS_3", "OVERDUE_STATUS_3_LAST")], DATA_DT)
 
@@ -186,7 +282,7 @@ table.4.2$DATA_DT <- paste(month(as.Date(table.4.2$DATA_DT) %m-% months(1)), mon
   paste(c("月汇总"), sep = "")
 
 # 资产情况月度分析  Output: table.5.1; table.5.2
-data.table.5 <- arrange(risk.data.all[c("DATA_DT", "BEGIN_DATE", "OVERDUE_STATUS_3", "OD_AMT", "LOAN_M_CNT", "RELOAN", "NEW_AMT")], BEGIN_DATE)
+data.table.5 <- arrange(risk.data.all[c("DATA_DT", "BEGIN_DATE", "OVERDUE_STATUS_3", "OD_AMT", "LOAN_M_CNT", "NEW_AMT")], BEGIN_DATE)
 data.table.5$LOAN_M_CNT <- substr(data.table.5$LOAN_M_CNT, 1, 7)
 
 table.5.1.1 <- arrange(aggregate(NEW_AMT~BEGIN_DATE, data.table.5, FUN = "sum"), BEGIN_DATE)
@@ -302,6 +398,151 @@ colnames(table.7.1) <- c("month", "正常", "一般", "催收", "严重")
 colnames(table.7.2) <- c("month", "一般", "催收", "严重")
 colnames(table.7.3) <- c("month", "状态", "未结清户数", "占比", "逾期本金", "逾期总额", "余额", "占比")
 
+# 放款情况 OUTPUT: table.8.1; table.8.2; table.8.3
+data.table.8 <- risk.data.all[c("DATA_DT", "PROV_CD", "SHENGSHI_CD", "OVERDUE_STATUS_3", "CNT", "LOAN_PR", "BAL")]
+
+# data.table.8.1 <- subset(data.table.8, DATA_DT == as.Date("2017-03-30")) # test for accuracy
+data.table.8.1 <- subset(data.table.8, DATA_DT == max(data.table.8$DATA_DT))
+table.8.2.1 <- aggregate(data.table.8.1[,-1:-4], by = list(SHENGSHI_CD = data.table.8.1$SHENGSHI_CD), FUN = "sum")
+table.8.2.2 <- aggregate(CNT~SHENGSHI_CD, subset(data.table.8.1, OVERDUE_STATUS_3 != 2), FUN = "sum")
+table.8.2 <- merge(table.8.2.1, table.8.2.2, by = "SHENGSHI_CD", all =T)
+table.8.2 <- merge(table.8.2, city[,-1], by.x = "SHENGSHI_CD", by.y = "CODE", all.x = T)
+table.8.2 <- table.8.2[,c(6,1:3,5,4)]
+table.8.2[is.na(table.8.2)] <- 0
+table.8.2 <- rbind(table.8.2, c(NA, NA, sapply(table.8.2[,3:6], sum)))
+
+table.8.1.1 <- aggregate(data.table.8.1[,-1:-4], by = list(PROV_CD = data.table.8.1$PROV_CD), FUN = "sum")
+table.8.1.2 <- aggregate(CNT~PROV_CD, subset(data.table.8.1, OVERDUE_STATUS_3 != 2), FUN = "sum")
+table.8.1 <- merge(table.8.1.1, table.8.1.2, by = "PROV_CD", all = T)
+table.8.1 <- merge(table.8.1, prov[,-1], by.x = "PROV_CD", by.y = "CODE", all.x = T)
+table.8.1 <- table.8.1[,c(1,6,2:3,5,4)]
+table.8.1[is.na(table.8.1)] <- 0
+table.8.1 <- rbind(table.8.1, c(NA, NA, sapply(table.8.1[,3:6], sum)))
+
+data.table.8.3 <- risk.data.all[c("DATA_DT", "NEW_LOAN", "CNT", "NEW_AMT", "LOAN_PR")]
+table.8.3.1 <- aggregate(subset(data.table.8.3, NEW_LOAN == 1)[,3:4], by = list(DATA_DT = subset(data.table.8.3, NEW_LOAN == 1)$DATA_DT), "sum")
+table.8.3.2 <- aggregate(data.table.8.3[,c(5,3)], by = list(DATA_DT = data.table.8.3$DATA_DT), "sum")
+table.8.3 <- merge(table.8.3.1, table.8.3.2, by = "DATA_DT", all = T)
+table.8.3$DATA_DT <- substr(table.8.3$DATA_DT, 1, 7)
+names(table.8.3) <- c("月份", "新增放款户数", "新增放款金额", "当月累计金额", "当月累计户数")
+
+# 逾期率及不良率 OUTPUT: table.9.1; table.9.2; table.9.3; table.9.4
+data.table.9 <- risk.data.all[c("DATA_DT", "OVERDUE_STATUS_3", "CNT", "OD_AMT", "LOAN_PR", "MATURITY_DAYS", "BAL", "PROV_CD", "SHENGSHI_CD", "LOAN_PR_SCOPE")]
+
+table.9.1.1 <- setNames(arrange(aggregate(CNT~DATA_DT, subset(data.table.9, OVERDUE_STATUS_3 != 2), "sum"), DATA_DT), c("DATA_DT", "CNT.1"))
+table.9.1.2 <- arrange(aggregate(data.table.9[c("CNT", "LOAN_PR", "OD_AMT", "BAL")], by = list(DATA_DT = data.table.9$DATA_DT), "sum"), DATA_DT)
+data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1)
+table.9.1.3 <- setNames(arrange(aggregate(data.table.9.1[c("CNT")], list(DATA_DT = data.table.9.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT.2"))
+data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS > 0)
+table.9.1.4 <- setNames(arrange(aggregate(data.table.9.1[c("CNT", "OD_AMT")], list(DATA_DT = data.table.9.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT.X", "OD_AMT.X"))
+data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS == 3)
+table.9.1.5 <- setNames(arrange(aggregate(data.table.9.1[c("CNT", "OD_AMT")], list(DATA_DT = data.table.9.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT.Y", "OD_AMT.Y"))
+table.9.1 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.9.1.1, table.9.1.2, table.9.1.3, table.9.1.4, table.9.1.5))
+table.9.1$DATA_DT <- substr(table.9.1$DATA_DT, 1, 7)
+table.9.1[is.na(table.9.1)] <- 0
+table.9.1 <- table.9.1[c(1:4, 7:8, 10, 5, 9, 11, 6)]
+table.9.1$rate.1 <- percent(table.9.1$OD_AMT/table.9.1$BAL, d = 2)
+table.9.1$rate.2 <- percent(table.9.1$OD_AMT.X/table.9.1$BAL, d = 2)
+table.9.1$rate.3 <- percent(table.9.1$OD_AMT.Y/table.9.1$BAL, d = 2)
+
+# data.table.9.2 <- subset(data.table.9, DATA_DT == as.Date("2017-03-30")) # test for accuracy
+data.table.9.2 <- subset(data.table.9, DATA_DT == max(data.table.9$DATA_DT))
+table.9.2.6 <- setNames(arrange(aggregate(BAL~PROV_CD, subset(data.table.9.2, OVERDUE_STATUS_3 == 1), "sum"), PROV_CD),c("PROV_CD", "BAL.od"))
+table.9.2.1 <- setNames(arrange(aggregate(CNT~PROV_CD, subset(data.table.9.2, OVERDUE_STATUS_3 != 2), "sum"), PROV_CD), c("PROV_CD", "CNT.1"))
+table.9.2.2 <- arrange(aggregate(data.table.9.2[c("BAL")], by = list(PROV_CD = data.table.9.2$PROV_CD), "sum"), PROV_CD)
+data.table.9.2.1 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1)
+table.9.2.3 <- setNames(arrange(aggregate(data.table.9.2.1[c("CNT", "OD_AMT")], list(PROV_CD = data.table.9.2.1$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT.2", "OD_AMT"))
+data.table.9.2.2 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS > 0)
+table.9.2.4 <- setNames(arrange(aggregate(data.table.9.2.2[c("CNT", "OD_AMT")], list(PROV_CD = data.table.9.2.2$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT.X", "OD_AMT.X"))
+data.table.9.2.3 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS == 3)
+table.9.2.5 <- setNames(arrange(aggregate(data.table.9.2.3[c("CNT", "OD_AMT")], list(PROV_CD = data.table.9.2.3$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT.Y", "OD_AMT.Y"))
+table.9.2 <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.9.2.1, table.9.2.2, table.9.2.3, table.9.2.4, table.9.2.5, table.9.2.6))
+table.9.2$PROV_CD <- substr(table.9.2$PROV_CD, 1, 7)
+table.9.2[is.na(table.9.2)] <- 0
+table.9.2 <- merge(prov[,-1], table.9.2, by.x = "CODE", by.y = "PROV_CD", all.y = T)
+table.9.2 <- rbind(table.9.2, c(NA, NA, sapply(table.9.2[,-1:-2], sum)))
+table.9.2 <- data.frame(append(table.9.2, list(rate.1 = percent(table.9.2$OD_AMT/table.9.2$BAL, d = 2)), after = 6))
+table.9.2 <- data.frame(append(table.9.2, list(rate.2 = percent(table.9.2$OD_AMT.X/table.9.2$BAL, d = 2)), after = 9))
+table.9.2 <- data.frame(append(table.9.2, list(rate.3 = percent(table.9.2$OD_AMT.Y/table.9.2$BAL, d = 2)), after = 12))
+table.9.2 <- data.frame(append(table.9.2, list(rate.4 = percent(table.9.2$BAL.od/table.9.2$BAL, d = 2)), after = 14))
+
+table.9.3.1 <- setNames(arrange(aggregate(CNT~SHENGSHI_CD, subset(data.table.9.2, OVERDUE_STATUS_3 != 2), "sum"), SHENGSHI_CD), c("SHENGSHI_CD", "CNT.1"))
+table.9.3.2 <- arrange(aggregate(BAL~SHENGSHI_CD, data.table.9.2, "sum"), SHENGSHI_CD)
+table.9.3.3 <- arrange(aggregate(data.table.9.2.1[c("CNT", "OD_AMT")], by = list(SHENGSHI_CD = data.table.9.2.1$SHENGSHI_CD), "sum"), SHENGSHI_CD)
+table.9.3 <- Reduce(function(x,y) merge(x,y, by = "SHENGSHI_CD", all = T), list(table.9.3.1, table.9.3.2, table.9.3.3))
+table.9.3 <- merge(city[,-1], table.9.3, by.x = "CODE", by.y = "SHENGSHI_CD", all.y = T)
+table.9.3[is.na(table.9.3)] <- 0
+table.9.3 <- rbind(table.9.3, c(NA, NA, sapply(table.9.3[,-1:-2], sum)))
+table.9.3 <- data.frame(append(table.9.3, list(rate = percent(table.9.3$OD_AMT/table.9.3$BAL, d = 2)), after = ncol(table.9.3)))
+
+data.table.9.4 <- subset(data.table.9.2, OVERDUE_STATUS_3 != 2)
+table.9.4.1 <- arrange(aggregate(data.table.9.4[c("CNT", "LOAN_PR", "BAL")], by = list(LOAN_PR_SCOPE = data.table.9.4$LOAN_PR_SCOPE), "sum"), LOAN_PR_SCOPE)
+table.9.4.2 <- arrange(aggregate(data.table.9.2.1[c("CNT", "OD_AMT")], by = list(LOAN_PR_SCOPE = data.table.9.2.1$LOAN_PR_SCOPE), "sum"), LOAN_PR_SCOPE)
+table.9.4 <- Reduce(function(x,y) merge(x,y, by = "LOAN_PR_SCOPE", all = T), list(table.9.4.1, table.9.4.2))
+table.9.4 <- rbind(table.9.4, c(NA, sapply(table.9.4[,-1], sum)))
+table.9.4 <- data.frame(append(table.9.4, list(rate = percent(table.9.4$OD_AMT/table.9.4$BAL, d = 2)), after = ncol(table.9.4)))
+
+names(table.9.2) <- c("CORP", "公司ID", "未结清户数", "省余额", "保理逾期户数", "保理逾期金额", "保理逾期率", "银行逾期户数",
+                      "银行逾期金额", "银行逾期率", "银行不良户数", "银行不良金额", "银行不良率", "逾期余额", "余额逾期率")
+names(table.9.3) <- c("编码", "地市营业部", "未结清数", "余额", "逾期数", "逾期金额", "逾期率")
+
+# 黄绿灯逾期（历史值）OUTPUT:table.10.1; table.10.2
+data.table.10 <- subset(risk.data.all[c("DATA_DT", "OVERDUE_STATUS_3", "LIGHT", "BAL", "CNT", "OD_AMT", "PROV_CD")], OVERDUE_STATUS_3 != 2)
+
+data.table.10.1 <- subset(data.table.10, OVERDUE_STATUS_3 == 1)
+table.10.1.1 <- arrange(aggregate(data.table.10[c("CNT", "BAL")], by = list(DATA_DT = data.table.10$DATA_DT), "sum"), DATA_DT)
+table.10.1.2 <- setNames(arrange(aggregate(data.table.10.1[c("CNT", "OD_AMT")], by = list(DATA_DT = data.table.10.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT_OD", "OD_AMT_OD"))
+table.10.1.3 <- arrange(aggregate(data.table.10[c("CNT", "BAL")], by = list(DATA_DT = data.table.10$DATA_DT, LIGHT = data.table.10$LIGHT), "sum"), DATA_DT, LIGHT) %>%
+  reshape(idvar = "DATA_DT", timevar = "LIGHT", direction = "wide")
+table.10.1.4 <- arrange(aggregate(data.table.10.1[c("CNT", "OD_AMT")], by = list(DATA_DT = data.table.10.1$DATA_DT, LIGHT = data.table.10.1$LIGHT), "sum"), DATA_DT, LIGHT) %>%
+  reshape(idvar = "DATA_DT", timevar = "LIGHT", direction = "wide")
+table.10.1 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.10.1.1, table.10.1.2, table.10.1.3, table.10.1.4))
+table.10.1[is.na(table.10.1)] <- 0
+table.10.1[,6:13] <- table.10.1[,c("CNT.1.x", "BAL.1", "CNT.1.y", "OD_AMT.1", "CNT.0.x", "BAL.0", "CNT.0.y", "OD_AMT.0")]
+table.10.1 <- data.frame(append(table.10.1, list(rate.1 = percent(table.10.1$OD_AMT_OD/table.10.1$BAL, d = 2)), after = 5))
+table.10.1 <- data.frame(append(table.10.1, list(rate.2 = percent(table.10.1[,10]/table.10.1[,8], d = 2)), after = 10))
+table.10.1 <- data.frame(append(table.10.1, list(rate.3 = percent(table.10.1[,15]/table.10.1[,13], d = 2)), after = ncol(table.10.1)))
+table.10.1$DATA_DT <- substr(table.10.1$DATA_DT, 1, 7)
+
+# data.table.10.2 <- subset(data.table.10, DATA_DT == as.Date("2017-03-30")) # test for accuracy
+data.table.10.2 <- subset(data.table.10, DATA_DT == max(data.table.10$DATA_DT))
+data.table.10.2.1 <- subset(data.table.10.2, OVERDUE_STATUS_3 == 1)
+
+table.10.2.1 <- arrange(aggregate(data.table.10.2[c("CNT", "BAL")], by = list(PROV_CD = data.table.10.2$PROV_CD), "sum"), PROV_CD)
+table.10.2.2 <- setNames(arrange(aggregate(data.table.10.2.1[c("CNT", "OD_AMT")], by = list(PROV_CD = data.table.10.2.1$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT_OD", "OD_AMT_OD"))
+table.10.2.3 <- arrange(aggregate(data.table.10.2[c("CNT", "BAL")], by = list(PROV_CD = data.table.10.2$PROV_CD, LIGHT = data.table.10.2$LIGHT), "sum"), PROV_CD, LIGHT) %>%
+  reshape(idvar = "PROV_CD", timevar = "LIGHT", direction = "wide")
+table.10.2.4 <- arrange(aggregate(data.table.10.2.1[c("CNT", "OD_AMT")], by = list(PROV_CD = data.table.10.2.1$PROV_CD, LIGHT = data.table.10.2.1$LIGHT), "sum"), PROV_CD, LIGHT) %>%
+  reshape(idvar = "PROV_CD", timevar = "LIGHT", direction = "wide")
+table.10.2 <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.10.2.1, table.10.2.2, table.10.2.3, table.10.2.4))
+table.10.2[is.na(table.10.2)] <- 0
+table.10.2[,6:13] <- table.10.2[,c("CNT.1.x", "BAL.1", "CNT.1.y", "OD_AMT.1", "CNT.0.x", "BAL.0", "CNT.0.y", "OD_AMT.0")]
+table.10.2 <- data.frame(append(table.10.2, list(rate.1 = percent(table.10.2$OD_AMT_OD/table.10.2$BAL, d = 2)), after = 5))
+table.10.2 <- data.frame(append(table.10.2, list(rate.2 = percent(table.10.2[,10]/table.10.2[,8], d = 2)), after = 10))
+table.10.2 <- data.frame(append(table.10.2, list(rate.3 = percent(table.10.2[,15]/table.10.2[,13], d = 2)), after = ncol(table.10.2)))
+
+table.10.2 <- merge(prov[,-1], table.10.2, by.x = "CODE", by.y = "PROV_CD", all.y = T)
+names(table.10.2) <- c("编号", "分公司", "未结清数", "余额", "逾期数", "逾期总额", "逾期率", "未结清_黄灯", "黄灯余额", "黄灯逾期数", "黄灯逾期金额", "黄灯逾期率",
+                       "未结清_绿灯", "绿灯余额", "绿灯逾期数", "绿灯逾期金额", "绿灯逾期率")
+
+# 续贷情况（历史值）OUTPUT: table.11.1; table.11.2; table.11.3
+table.11.1 <- merge(data.11.1, data.11.2, by = "DATA_DT", all = T)
+table.11.1$rate <- percent(table.11.1$RELOAN_MCHT_CNT/table.11.1$FINISHED_MCHT, d = 2)
+table.11.1$DATA_DT <- substr(table.11.1$DATA_DT, 1, 7)
+
+table.11.2 <- merge(data.11.3, data.11.4, by = c("DATA_DT", "PROV_CD"), all = T)
+table.11.2 <- merge(prov[,-1], table.11.2, by.x = "CODE", by.y = "PROV_CD", all.y = T)
+table.11.2 <- arrange(table.11.2, CODE, DATA_DT)
+table.11.2[is.na(table.11.2)] <- 0
+table.11.2$rate <- percent(table.11.2$RELOAN_MCHT_CNT/table.11.2$FINISHED_MCHT, d = 2)
+table.11.2$DATA_DT <- substr(table.11.2$DATA_DT, 1, 7)
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+data.11.3 <- subset(risk.data.all, NEW_LOAN == 1 & RELOAN > 1)
+table.11.3.1 <- aggregate(data.11.3[c("CNT", "LOAN_PR")], by = list(BEGIN_DATE = data.11.3$BEGIN_DATE), "sum")
+
+names(table.11.3) <- c("月份", "续贷人次", "续贷金额", "累计续贷人次", "累计续贷金额")
+
 # OUTPUT
 # template
 ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBR.xls"
@@ -321,6 +562,9 @@ writeWorksheetToFile(template, data = table.1.amt,
 writeWorksheetToFile(template, data = table.2,
                      sheet = "续贷逾期情况", header = F,
                      startRow = 4, startCol = 1)
+writeWorksheetToFile(template, data = table.2.1,
+                     sheet = "续贷逾期情况", header = T,
+                     startRow = 6 + nrow(table.2), startCol = 1)
 writeWorksheetToFile(template, data = table.3,
                      sheet = "还款情况", header = F,
                      startRow = 3, startCol = 1)
@@ -351,7 +595,59 @@ writeWorksheetToFile(template, data = table.7.2,
 writeWorksheetToFile(template, data = table.7.3,
                      sheet = "资产结构类数据", header = T,
                      startRow = nrow(table.7.1) + nrow(table.7.1) + 6, startCol = 1)
+writeWorksheetToFile(template, data = table.8.1,
+                     sheet = "放款情况", header = F,
+                     startRow = 2, startCol = 1)
+writeWorksheetToFile(template, data = table.8.2,
+                     sheet = "放款情况", header = F,
+                     startRow = 2, startCol = 11)
+writeWorksheetToFile(template, data = table.8.3,
+                     sheet = "放款情况", header = T,
+                     startRow = 25, startCol = 3)
+writeWorksheetToFile(template, data = table.9.1,
+                     sheet = "逾期率及不良率", header = F,
+                     startRow = 2, startCol = 1)
+writeWorksheetToFile(template, data = table.9.2,
+                     sheet = "逾期率及不良率", header = T,
+                     startRow = 4 + nrow(table.9.1), startCol = 1)
+writeWorksheetToFile(template, data = table.9.3,
+                     sheet = "逾期率及不良率", header = T,
+                     startRow = 6 + nrow(table.9.1) + nrow(table.9.2), startCol = 1)
+writeWorksheetToFile(template, data = table.9.4[,-1],
+                     sheet = "逾期率及不良率", header = F,
+                     startRow = 3, startCol = 19)
+writeWorksheetToFile(template, data = table.10.1,
+                     sheet = "黄绿灯逾期（历史值）", header = F,
+                     startRow = 3, startCol = 4)
+writeWorksheetToFile(template, data = table.10.2,
+                     sheet = "黄绿灯逾期（历史值）", header = T,
+                     startRow = 5 + nrow(table.10.1), startCol = 4)
+writeWorksheetToFile(template, data = table.11.1,
+                     sheet = "续贷情况（历史值）", header = F,
+                     startRow = 3, startCol = 1)
+writeWorksheetToFile(template, data = table.11.2,
+                     sheet = "续贷情况（历史值）", header = F,
+                     startRow = 3, startCol = 11)
+writeWorksheetToFile(template, data = c("借据号概念"),
+                     sheet = "续贷情况（历史值）", header = F,
+                     startRow = 5 + nrow(table.11.1), startCol = 1)
+writeWorksheetToFile(template, data = table.11.3,
+                     sheet = "续贷情况（历史值）", header = T,
+                     startRow = 6 + nrow(table.11.1), startCol = 1)
 
+
+
+
+
+
+
+                       
+                       
+                       
+                       
+                       
+                       
+                       
 
 
 

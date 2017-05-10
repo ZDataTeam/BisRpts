@@ -145,7 +145,7 @@ table.2 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.
 table.2$DATA_DT <- substr(table.2$DATA_DT, 1, 7)
 
 # reloan == 1
-data.table.2.1 <- subset(risk.data.all[c("DATA_DT", "PROV_CD", "RELOAN", "OVERDUE_STATUS_3", "CNT", "BAL", "OD_AMT", "MATURITY_DAYS")], DATA_DT == max(data.table.8$DATA_DT))
+data.table.2.1 <- subset(risk.data.all[c("DATA_DT", "PROV_CD", "RELOAN", "OVERDUE_STATUS_3", "CNT", "BAL", "OD_AMT", "MATURITY_DAYS")], DATA_DT == max(risk.data.all$DATA_DT))
 
 table.2.1.firstLoan <- aggregate(CNT~PROV_CD, subset(data.table.2.1, RELOAN == 1 & OVERDUE_STATUS_3 != 2), FUN = "sum")
 

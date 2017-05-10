@@ -11,26 +11,26 @@ channel <- odbcConnect("OracleInstantClient", uid = "zhangj", pwd = "zhangj1234"
 
 risk.data.all <- sqlQuery(channel, 'select * from THBL.RISK_STATISTICS_ALL')
 coding <- sqlQuery(channel, 'select * from THBL.RISK_DIMENSION')
-data.11.1 <- sqlQuery(channel, 'SELECT DATA_DT,
-                      COUNT(DISTINCT MCHT_CD) AS RELOAN_MCHT_CNT 
-                      FROM THBL.TEMP_RISK_STAT_LAST 
-                      where reloan > 1 
-                      GROUP BY DATA_DT')
-data.11.2 <- sqlQuery(channel, 'SELECT DATA_DT,
-                      COUNT(DISTINCT MCHT_CD) AS FINISHED_MCHT
-                      FROM THBL.TEMP_RISK_STAT_LAST 
-                      where overdue_status_3 = 2  
-                      GROUP BY DATA_DT')
-data.11.3 <- sqlQuery(channel, 'SELECT DATA_DT, PROV_CD,
-                      COUNT(DISTINCT MCHT_CD) AS RELOAN_MCHT_CNT 
-                      FROM THBL.TEMP_RISK_STAT_LAST 
-                      where reloan > 1 
-                      GROUP BY DATA_DT, PROV_CD')
-data.11.4 <- sqlQuery(channel, 'SELECT DATA_DT, PROV_CD,
-                      COUNT(DISTINCT MCHT_CD) AS FINISHED_MCHT
-                      FROM THBL.TEMP_RISK_STAT_LAST 
-                      where overdue_status_3 = 2  
-                      GROUP BY DATA_DT, PROV_CD')
+# data.11.1 <- sqlQuery(channel, 'SELECT DATA_DT,
+#                       COUNT(DISTINCT MCHT_CD) AS RELOAN_MCHT_CNT 
+#                       FROM THBL.TEMP_RISK_STAT_LAST 
+#                       where reloan > 1 
+#                       GROUP BY DATA_DT')
+# data.11.2 <- sqlQuery(channel, 'SELECT DATA_DT,
+#                       COUNT(DISTINCT MCHT_CD) AS FINISHED_MCHT
+#                       FROM THBL.TEMP_RISK_STAT_LAST 
+#                       where overdue_status_3 = 2  
+#                       GROUP BY DATA_DT')
+# data.11.3 <- sqlQuery(channel, 'SELECT DATA_DT, PROV_CD,
+#                       COUNT(DISTINCT MCHT_CD) AS RELOAN_MCHT_CNT 
+#                       FROM THBL.TEMP_RISK_STAT_LAST 
+#                       where reloan > 1 
+#                       GROUP BY DATA_DT, PROV_CD')
+# data.11.4 <- sqlQuery(channel, 'SELECT DATA_DT, PROV_CD,
+#                       COUNT(DISTINCT MCHT_CD) AS FINISHED_MCHT
+#                       FROM THBL.TEMP_RISK_STAT_LAST 
+#                       where overdue_status_3 = 2  
+#                       GROUP BY DATA_DT, PROV_CD')
 
 
 risk.data.all$DATA_DT <- as.Date(risk.data.all$DATA_DT)
@@ -526,21 +526,41 @@ names(table.10.2) <- c("编号", "分公司", "未结清数", "余额", "逾期�
                        "未结清_绿灯", "绿灯余额", "绿灯逾期数", "绿灯逾期金额", "绿灯逾期率")
 
 # 续贷情况（历史值）OUTPUT: table.11.1; table.11.2; table.11.3
-table.11.1 <- merge(data.11.1, data.11.2, by = "DATA_DT", all = T)
-table.11.1$rate <- percent(table.11.1$RELOAN_MCHT_CNT/table.11.1$FINISHED_MCHT, d = 2)
-table.11.1$DATA_DT <- substr(table.11.1$DATA_DT, 1, 7)
+# 
+# table.11.2 <- merge(data.11.3, data.11.4, by = c("DATA_DT", "PROV_CD"), all = T)
+# table.11.2 <- merge(prov[,-1], table.11.2, by.x = "CODE", by.y = "PROV_CD", all.y = T)
+# table.11.2 <- arrange(table.11.2, CODE, DATA_DT)
+# table.11.2[is.na(table.11.2)] <- 0
+# table.11.2$rate <- percent(table.11.2$RELOAN_MCHT_CNT/table.11.2$FINISHED_MCHT, d = 2)
+# table.11.2$DATA_DT <- substr(table.11.2$DATA_DT, 1, 7)
 
-table.11.2 <- merge(data.11.3, data.11.4, by = c("DATA_DT", "PROV_CD"), all = T)
-table.11.2 <- merge(prov[,-1], table.11.2, by.x = "CODE", by.y = "PROV_CD", all.y = T)
-table.11.2 <- arrange(table.11.2, CODE, DATA_DT)
+table.11.1.1 <- aggregate(CNT~DATA_DT, subset(risk.data.all, RELOANTIMES == 2), "sum")
+table.11.1.2 <- aggregate(CNT~DATA_DT, subset(risk.data.all, RELOANTIMES == 1 & OVERDUE_STATUS_3 == 2), "sum")
+table.11.1 <- arrange(merge(table.11.1.1, table.11.1.2, by = "DATA_DT", all = T), DATA_DT)
+table.11.1$DATA_DT <- substr(table.11.1$DATA_DT, 1, 7)
+table.11.1$rate <- percent(table.11.1$CNT.x/table.11.1$CNT.y, d = 2)
+
+data.table.11.2.1 <- subset(risk.data.all, RELOANTIMES == 2)
+table.11.2.1 <- aggregate(data.table.11.2.1$CNT, by = list(PROV_CD = data.table.11.2.1$PROV_CD, DATA_DT = data.table.11.2.1$DATA_DT), "sum")
+
+data.table.11.2.2 <- subset(risk.data.all, RELOANTIMES == 1 & OVERDUE_STATUS_3 == 2)
+table.11.2.2 <- aggregate(data.table.11.2.2$CNT, by = list(PROV_CD = data.table.11.2.2$PROV_CD, DATA_DT = data.table.11.2.2$DATA_DT), "sum")
+
+table.11.2 <- merge(table.11.2.1, table.11.2.2, by = c("DATA_DT", "PROV_CD"), all = T)
 table.11.2[is.na(table.11.2)] <- 0
-table.11.2$rate <- percent(table.11.2$RELOAN_MCHT_CNT/table.11.2$FINISHED_MCHT, d = 2)
+table.11.2 <- arrange(merge(prov[,-1], table.11.2, by.x = "CODE", by.y = "PROV_CD", all.y = T), CODE, DATA_DT)
+table.11.2$rate <- percent(table.11.2$x.x/table.11.2$x.y, d = 2)
 table.11.2$DATA_DT <- substr(table.11.2$DATA_DT, 1, 7)
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 data.11.3 <- subset(risk.data.all, NEW_LOAN == 1 & RELOAN > 1)
 table.11.3.1 <- aggregate(data.11.3[c("CNT", "LOAN_PR")], by = list(BEGIN_DATE = data.11.3$BEGIN_DATE), "sum")
+table.11.3.1$BEGIN_DATE <- substr(table.11.3.1$BEGIN_DATE, 1, 7)
 
+data.11.3.1 <- subset(risk.data.all, RELOANTIMES != 1)
+table.11.3.2 <- aggregate(data.11.3.1[c("CNT", "LOAN_PR")], by = list(DATA_DT = data.11.3.1$DATA_DT), "sum")
+table.11.3.2$DATA_DT <- substr(table.11.3.2$DATA_DT, 1, 7)
+
+table.11.3 <- merge(table.11.3.1, table.11.3.2, by.x = "BEGIN_DATE", by.y = "DATA_DT", all = T)
 names(table.11.3) <- c("月份", "续贷人次", "续贷金额", "累计续贷人次", "累计续贷金额")
 
 # OUTPUT

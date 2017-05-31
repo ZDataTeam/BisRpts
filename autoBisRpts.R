@@ -10,20 +10,55 @@ library(XLConnect)
 channel <- odbcConnect("OracleInstantClient", uid = "thbl", pwd = "thblserver")
 
 # 15:28 PM 之后跑
-current.date <- as.character(Sys.Date(), '%Y%m%d')
+current.date <- as.character(Sys.Date(), '%Y%m%d')  # 日报日期设定
 last.month.date <- as.character(as.Date(format(Sys.Date(), '%Y-%m-01'))-1, '%Y%m%d')
 
-# sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', current.date, ',1); end;\') from dual;')) #日
-# sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', current.date, ',7); end;\') from dual;')) #周
-sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', last.month.date, ',30); end;\') from dual;')) #月
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# 周报日期设定
+week.date <- as.list(seq.Date(from = as.Date('2017/05/05'), to =Sys.Date(), by = "week")) %>%
+  lapply(function(x) as.character(x, '%Y%m%d'))
 
+week.report.date <- as.list(seq.Date(from = as.Date('2017/05/05'), to =Sys.Date(), by = "week")) %>%
+  sapply(function(x) paste('to_date(\'', x, '\',\'YYYY-MM-DD\')', sep = ""))
+week.report.date <- Reduce(function(x,y) paste(x, y, sep = ","), week.report.date)
 
-every.last.month.date <- list(seq.Date(from = as.Date('2016/01/01'), to =Sys.Date(), by = "month") - 1) %>%
-sapply(function(x) paste('to_date(\'', x, '\',\'YYYY-MM-DD\')', sep = ""))
+# 月报月末序列
+month.date <- as.list(seq.Date(from = as.Date('2016/02/01'), to =Sys.Date(), by = "month") - 1) %>%
+  lapply(function(x) as.character(x, '%Y%m%d'))
+
+every.last.month.date <- as.list(seq.Date(from = as.Date('2016/02/01'), to =Sys.Date(), by = "month") - 1) %>%
+  sapply(function(x) paste('to_date(\'', x, '\',\'YYYY-MM-DD\')', sep = ""))
 every.last.month.date <-  Reduce(function(x,y) paste(x, y, sep = ","), every.last.month.date)
 
-# risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt = to_date(\'', current.date,'\',\'YYYYMMDD\')')) #取某天
-risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', every.last.month.date,')')) #月报
+
+
+
+# 状态转移参数(Last) 选择性执行
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# 日
+# sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', current.date, ',1); end;\') from dual;'))
+
+# 周
+# sapply(week.date, function(x) sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', x, ',7); end;\') from dual;')))
+
+# 月
+sapply(month.date, function(x) sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', x, ', 0); end;\') from dual;')))
+
+
+
+
+
+# 获取源数据 选择性执行
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#取某天
+# risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt = to_date(\'', current.date,'\',\'YYYYMMDD\')')) 
+
+#周报
+# risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', week.report.date,')')) 
+
+#月报
+risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', every.last.month.date,')')) 
 
 
 coding <- sqlQuery(channel, 'select * from THBL.RISK_DIMENSION')
@@ -240,24 +275,24 @@ table.4.1 <- arrange(aggregate(CNT~DATA_DT+OVERDUE_STATUS_5, data.table.4, FUN =
 table.4.1$regular <- table.4.1$CNT.0 + table.4.1$CNT.1
 
 
-data.table.4.2 <- na.omit(subset(data.table.4, (OVERDUE_STATUS_5_LAST == 0 | OVERDUE_STATUS_5_LAST == 1) &
-                                   (OVERDUE_STATUS_5 != 0 & OVERDUE_STATUS_5 != 1)))
+data.table.4.2 <- subset(data.table.4, (OVERDUE_STATUS_5_LAST == 0 | OVERDUE_STATUS_5_LAST == 1) &
+                                   (OVERDUE_STATUS_5 != 0 & OVERDUE_STATUS_5 != 1))
 table.4.part.2 <- arrange(setNames(aggregate(data.table.4.2$CNT, data.table.4.2["DATA_DT"], FUN = "sum"),
                                    c("DATA_DT","0-1")), DATA_DT)
 
-data.table.4.3 <- na.omit(subset(data.table.4, OVERDUE_STATUS_5_LAST == 2 & OVERDUE_STATUS_5 == 3))
+data.table.4.3 <- subset(data.table.4, OVERDUE_STATUS_5_LAST == 2 & OVERDUE_STATUS_5 == 3)
 table.4.part.3 <- arrange(setNames(aggregate(data.table.4.3$CNT, data.table.4.3["DATA_DT"], FUN = "sum"),
                                    c("DATA_DT","2-3")), DATA_DT)
 
-data.table.4.4 <- na.omit(subset(data.table.4, OVERDUE_STATUS_5_LAST == 2 & OVERDUE_STATUS_5 == 4))
+data.table.4.4 <- subset(data.table.4, OVERDUE_STATUS_5_LAST == 2 & OVERDUE_STATUS_5 == 4)
 table.4.part.4 <- arrange(setNames(aggregate(data.table.4.4$CNT, data.table.4.4["DATA_DT"], FUN = "sum"),
                                    c("DATA_DT","2-4")), DATA_DT)
 
-data.table.4.5 <- na.omit(subset(data.table.4, OVERDUE_STATUS_5_LAST == 3 & OVERDUE_STATUS_5 == 4))
+data.table.4.5 <- subset(data.table.4, OVERDUE_STATUS_5_LAST == 3 & OVERDUE_STATUS_5 == 4)
 table.4.part.5 <- arrange(setNames(aggregate(data.table.4.5$CNT, data.table.4.5["DATA_DT"], FUN = "sum"),
                                    c("DATA_DT","3-4")), DATA_DT)
 
-data.table.4.6 <- na.omit(subset(data.table.4, OVERDUE_STATUS_5_LAST == 4 & OVERDUE_STATUS_5 == 4))
+data.table.4.6 <- subset(data.table.4, OVERDUE_STATUS_5_LAST == 4 & OVERDUE_STATUS_5 == 4)
 table.4.part.6 <- arrange(setNames(aggregate(data.table.4.6$CNT, data.table.4.6["DATA_DT"], FUN = "sum"),
                                    c("DATA_DT","4-4")), DATA_DT)
 
@@ -266,6 +301,8 @@ table.4.2 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(tabl
                                                                             table.4.part.5, table.4.part.6))
 table.4.1[is.na(table.4.1)] <- 0
 table.4.2[is.na(table.4.2)] <- 0
+
+
 
 table.4.2$rate.1 <- percent(table.4.2$`0-1`/table.4.1$regular[-nrow(table.4.1)], d = 2)
 table.4.2$rate.2 <- percent(table.4.2$`2-3`/table.4.1$CNT.2[-nrow(table.4.1)], d = 2)

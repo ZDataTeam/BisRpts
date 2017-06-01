@@ -593,7 +593,7 @@ names(table.11.3) <- c("日期", "续贷人次", "续贷金额", "累计续贷�
 # OUTPUT
 # template
 ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBRweekRelated.xls"
-template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\bisRpts_all_", Sys.Date(), ".xls")
+template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\bisRpts_exp_", Sys.Date(), ".xls")
 file.copy(ExcelFile, template)
 
 # output to excel

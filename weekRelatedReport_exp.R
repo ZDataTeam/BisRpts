@@ -154,7 +154,7 @@ table.2.part.3.allLoan <- aggregate(OD_AMT~DATA_DT, data.table.2, FUN = "sum")
 
 table.2.part.4.allLoan <- aggregate(OD_AMT~DATA_DT, subset(data.table.2, MATURITY_DAYS > 0), FUN = "sum")
 
-table.2.part.5.allLoan <- aggregate(OD_AMT~DATA_DT, subset(data.table.2, MATURITY_DAYS == 3), FUN = "sum")
+table.2.part.5.allLoan <- aggregate(OD_AMT~DATA_DT, subset(data.table.2, MATURITY_DAYS >= 3), FUN = "sum")
 
 table.2.part.6.allLoan <- aggregate(BAL~DATA_DT, data.table.2, FUN = "sum")
 
@@ -214,9 +214,9 @@ table.2.5.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, MATU
 
 table.2.6.allLoan <- setNames(aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS > 0), FUN = "sum"), c("PROV_CD", "OD_AMT.2"))
 
-table.2.7.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS == 3 & OVERDUE_STATUS_3 != 2), FUN = "sum"), c("PROV_CD", "CNT.4"))
+table.2.7.allLoan <- setNames(aggregate(CNT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS >= 3 & OVERDUE_STATUS_3 != 2), FUN = "sum"), c("PROV_CD", "CNT.4"))
 
-table.2.8.allLoan <- setNames(aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS == 3), FUN = "sum"), c("PROV_CD", "OD_AMT.3"))
+table.2.8.allLoan <- setNames(aggregate(OD_AMT~PROV_CD, subset(data.table.2.1, MATURITY_DAYS >= 3), FUN = "sum"), c("PROV_CD", "OD_AMT.3"))
 
 table.2.1.allLoan <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.2.1.allLoan, table.2.2.allLoan,
                                                                                     table.2.3.allLoan, table.2.4.allLoan,
@@ -464,7 +464,7 @@ data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1)
 table.9.1.3 <- setNames(arrange(aggregate(data.table.9.1[c("CNT")], list(DATA_DT = data.table.9.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT.2"))
 data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS > 0)
 table.9.1.4 <- setNames(arrange(aggregate(data.table.9.1[c("CNT", "OD_AMT")], list(DATA_DT = data.table.9.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT.X", "OD_AMT.X"))
-data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS == 3)
+data.table.9.1 <- subset(data.table.9, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS >= 3)
 table.9.1.5 <- setNames(arrange(aggregate(data.table.9.1[c("CNT", "OD_AMT")], list(DATA_DT = data.table.9.1$DATA_DT), "sum"), DATA_DT), c("DATA_DT", "CNT.Y", "OD_AMT.Y"))
 table.9.1 <- Reduce(function(x,y) merge(x,y, by = "DATA_DT", all = T), list(table.9.1.1, table.9.1.2, table.9.1.3, table.9.1.4, table.9.1.5))
 # table.9.1$DATA_DT <- substr(table.9.1$DATA_DT, 1, 7)
@@ -483,7 +483,7 @@ data.table.9.2.1 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1)
 table.9.2.3 <- setNames(arrange(aggregate(data.table.9.2.1[c("CNT", "OD_AMT")], list(PROV_CD = data.table.9.2.1$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT.2", "OD_AMT"))
 data.table.9.2.2 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS > 0)
 table.9.2.4 <- setNames(arrange(aggregate(data.table.9.2.2[c("CNT", "OD_AMT")], list(PROV_CD = data.table.9.2.2$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT.X", "OD_AMT.X"))
-data.table.9.2.3 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS == 3)
+data.table.9.2.3 <- subset(data.table.9.2, OVERDUE_STATUS_3 == 1 & MATURITY_DAYS >= 3)
 table.9.2.5 <- setNames(arrange(aggregate(data.table.9.2.3[c("CNT", "OD_AMT")], list(PROV_CD = data.table.9.2.3$PROV_CD), "sum"), PROV_CD), c("PROV_CD", "CNT.Y", "OD_AMT.Y"))
 table.9.2 <- Reduce(function(x,y) merge(x,y, by = "PROV_CD", all = T), list(table.9.2.1, table.9.2.2, table.9.2.3, table.9.2.4, table.9.2.5, table.9.2.6))
 # table.9.2$PROV_CD <- substr(table.9.2$PROV_CD, 1, 7)

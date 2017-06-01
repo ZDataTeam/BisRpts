@@ -26,8 +26,8 @@ risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all
 
 coding <- sqlQuery(channel, 'select * from THBL.RISK_DIMENSION')
 
-risk.data.all$DATA_DT <- format(risk.data.all$DATA_DT, '%Y-%m-%d')
-risk.data.all$BEGIN_DATE <- format(risk.data.all$BEGIN_DATE, '%Y-%m-%d')
+risk.data.all$DATA_DT <- as.Date(format(risk.data.all$DATA_DT, '%Y-%m-%d'))
+risk.data.all$BEGIN_DATE <- as.Date(format(risk.data.all$BEGIN_DATE, '%Y-%m-%d'))
 
 odbcClose(channel)
 

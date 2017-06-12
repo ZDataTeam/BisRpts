@@ -36,10 +36,10 @@ half.month.report.date <- Reduce(function(x,y) paste(x, y, sep = ","), half.mont
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # 周
-# sapply(week.date, function(x) sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', x, ',7); end;\') from dual;')))
+sapply(week.date, function(x) sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', x, ',7); end;\') from dual;')))
 
 # 双周
-sapply(half.month.date, function(x) sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', x, ', 14); end;\') from dual;')))
+# sapply(half.month.date, function(x) sqlQuery(channel, paste('select wrapper_func(\'begin risk_stat_month(', x, ', 14); end;\') from dual;')))
 
 
 
@@ -48,10 +48,10 @@ sapply(half.month.date, function(x) sqlQuery(channel, paste('select wrapper_func
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #周报
-# risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', week.report.date,')')) 
+risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', week.report.date,')')) 
 
 # 双周报
-risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', half.month.report.date,')'))
+# risk.data.all <- sqlQuery(channel, paste('select * from thbl.risk_statistics_all where data_dt in (', half.month.report.date,')'))
 
 
 
@@ -422,7 +422,7 @@ summary.7.3$Ratio.AMT <- percent(summary.7.3$Ratio.AMT, d = 2)
 sum.diff.7.3 <- rbind(summary.7.3, diff.7.3)
 sum.diff.7.3 <- sum.diff.7.3[,c(1,8,2:7)]
 table.7.3 <- arrange(rbind(table.7.3, sum.diff.7.3),DATA_DT)
-# table.7.3$DATA_DT <- substr(table.7.3$DATA_DT, 1, 7)
+table.7.3$DATA_DT <- as.character(table.7.3$DATA_DT)
 colnames(table.7.1) <- c("日期", "正常", "一般", "催收", "严重")
 colnames(table.7.2) <- c("日期", "一般", "催收", "严重")
 colnames(table.7.3) <- c("日期", "状态", "未结清户数", "占比", "逾期本金", "逾期总额", "余额", "占比")
@@ -593,32 +593,32 @@ names(table.11.3) <- c("日期", "续贷人次", "续贷金额", "累计续贷�
 # OUTPUT
 # template
 ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBRweekRelated.xls"
-template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\bisRpts_all_", Sys.Date(), ".xls")
+template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\weekRelated_bisRpts_all_", Sys.Date(), ".xls")
 file.copy(ExcelFile, template)
 
 # output to excel
-writeWorksheetToFile(template, data = table.1.cnt,
+writeWorksheetToFile(template, data = apply(table.1.cnt, c(1,2), as.character),
                      sheet = "资金变化", header = F,
                      startRow = 2, startCol = 1)
 writeWorksheetToFile(template, data = c("金额"),
                      sheet = "资金变化", header = F,
                      startRow = nrow(table.1.cnt) + 2, startCol = 1)
-writeWorksheetToFile(template, data = table.1.amt,
+writeWorksheetToFile(template, data = apply(table.1.amt, c(1,2), as.character),
                      sheet = "资金变化", header = F,
                      startRow = nrow(table.1.cnt) + 3, startCol = 1)
-writeWorksheetToFile(template, data = table.2,
+writeWorksheetToFile(template, data = apply(table.2, c(1,2), as.character),
                      sheet = "续贷逾期情况", header = F,
                      startRow = 4, startCol = 1)
-writeWorksheetToFile(template, data = table.2.1,
+writeWorksheetToFile(template, data = apply(table.2.1, c(1,2), as.character),
                      sheet = "续贷逾期情况", header = T,
                      startRow = 6 + nrow(table.2), startCol = 1)
-writeWorksheetToFile(template, data = table.3,
+writeWorksheetToFile(template, data = apply(table.3, c(1,2), as.character),
                      sheet = "还款情况", header = F,
                      startRow = 3, startCol = 1)
-writeWorksheetToFile(template, data = table.4.1,
+writeWorksheetToFile(template, data = apply(table.4.1, c(1,2), as.character),
                      sheet = "迁徙率月度情况", header = F,
                      startRow = 2, startCol = 1)
-writeWorksheetToFile(template, data = table.4.2,
+writeWorksheetToFile(template, data = apply(table.4.2, c(1,2), as.character),
                      sheet = "迁徙率月度情况", header = F,
                      startRow = 2, startCol = ncol(table.4.1) + 1)
 # writeWorksheetToFile(template, data = table.5.1,
@@ -627,58 +627,58 @@ writeWorksheetToFile(template, data = table.4.2,
 # writeWorksheetToFile(template, data = table.5.2,
 #                      sheet = "资产情况月度分析", header = T,
 #                      startRow = nrow(table.5.1)+4, startCol = 1)
-writeWorksheetToFile(template, data = table.6.all,
+writeWorksheetToFile(template, data = apply(table.6.all, c(1,2), as.character),
                      sheet = "终止和到期情况", header = F,
                      startRow = 4, startCol = 1)
-writeWorksheetToFile(template, data = table.7.1,
+writeWorksheetToFile(template, data = apply(table.7.1, c(1,2), as.character),
                      sheet = "资产结构类数据", header = T,
                      startRow = 2, startCol = 1)
 writeWorksheetToFile(template, data = c("金额比"),
                      sheet = "资产结构类数据", header = F,
                      startRow = nrow(table.7.1) + 3, startCol = 1)
-writeWorksheetToFile(template, data = table.7.2,
+writeWorksheetToFile(template, data = apply(table.7.2, c(1,2), as.character),
                      sheet = "资产结构类数据", header = T,
                      startRow = nrow(table.7.1) + 4, startCol = 1)
-writeWorksheetToFile(template, data = table.7.3,
+writeWorksheetToFile(template, data = apply(table.7.3, c(1,2), as.character),
                      sheet = "资产结构类数据", header = T,
                      startRow = nrow(table.7.1) + nrow(table.7.1) + 6, startCol = 1)
-writeWorksheetToFile(template, data = table.8.1,
+writeWorksheetToFile(template, data = apply(table.8.1, c(1,2), as.character),
                      sheet = "放款情况", header = F,
                      startRow = 2, startCol = 1)
-writeWorksheetToFile(template, data = table.8.2,
+writeWorksheetToFile(template, data = apply(table.8.2, c(1,2), as.character),
                      sheet = "放款情况", header = F,
                      startRow = 2, startCol = 11)
-writeWorksheetToFile(template, data = table.8.3,
+writeWorksheetToFile(template, data = apply(table.8.3, c(1,2), as.character),
                      sheet = "放款情况", header = T,
                      startRow = 25, startCol = 3)
-writeWorksheetToFile(template, data = table.9.1,
+writeWorksheetToFile(template, data = apply(table.9.1, c(1,2), as.character),
                      sheet = "逾期率及不良率", header = F,
                      startRow = 2, startCol = 1)
-writeWorksheetToFile(template, data = table.9.2,
+writeWorksheetToFile(template, data = apply(table.9.2, c(1,2), as.character),
                      sheet = "逾期率及不良率", header = T,
                      startRow = 4 + nrow(table.9.1), startCol = 1)
-writeWorksheetToFile(template, data = table.9.3,
+writeWorksheetToFile(template, data = apply(table.9.3, c(1,2), as.character),
                      sheet = "逾期率及不良率", header = T,
                      startRow = 6 + nrow(table.9.1) + nrow(table.9.2), startCol = 1)
-writeWorksheetToFile(template, data = table.9.4[,-1],
+writeWorksheetToFile(template, data = apply(table.9.4[,-1], c(1,2), as.character),
                      sheet = "逾期率及不良率", header = F,
                      startRow = 3, startCol = 19)
-writeWorksheetToFile(template, data = table.10.1,
+writeWorksheetToFile(template, data = apply(table.10.1, c(1,2), as.character),
                      sheet = "黄绿灯逾期（历史值）", header = F,
                      startRow = 3, startCol = 4)
-writeWorksheetToFile(template, data = table.10.2,
+writeWorksheetToFile(template, data = apply(table.10.2, c(1,2), as.character),
                      sheet = "黄绿灯逾期（历史值）", header = T,
                      startRow = 5 + nrow(table.10.1), startCol = 4)
-writeWorksheetToFile(template, data = table.11.1,
+writeWorksheetToFile(template, data = apply(table.11.1, c(1,2), as.character),
                      sheet = "续贷情况（历史值）", header = F,
                      startRow = 3, startCol = 1)
-writeWorksheetToFile(template, data = table.11.2,
+writeWorksheetToFile(template, data = apply(table.11.2, c(1,2), as.character),
                      sheet = "续贷情况（历史值）", header = F,
                      startRow = 3, startCol = 11)
 writeWorksheetToFile(template, data = c("借据号概念"),
                      sheet = "续贷情况（历史值）", header = F,
                      startRow = 5 + nrow(table.11.1), startCol = 1)
-writeWorksheetToFile(template, data = table.11.3,
+writeWorksheetToFile(template, data = apply(table.11.3, c(1,2), as.character),
                      sheet = "续贷情况（历史值）", header = T,
                      startRow = 6 + nrow(table.11.1), startCol = 1)
 

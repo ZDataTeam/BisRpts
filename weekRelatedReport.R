@@ -7,25 +7,25 @@ library(lubridate)
 library(sca)
 library(XLConnect)
 
-channel <- odbcConnect("OracleInstantClient", uid = "thbl", pwd = "thblserver")
+channel <- odbcConnect("oracle", uid = "thbl", pwd = "thblserver")
 
 # 15:28 PM 之后跑
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # 周报日期设定
-week.date <- as.list(seq.Date(from = as.Date('2017/05/05'), to = Sys.Date(), by = "week")) %>%
+week.date <- as.list(seq.Date(from = as.Date('2017/05/04'), to = Sys.Date(), by = "week")) %>%
   lapply(function(x) as.character(x, '%Y%m%d'))
 
-week.report.date <- as.list(seq.Date(from = as.Date('2017/05/05'), to =Sys.Date(), by = "week")) %>%
+week.report.date <- as.list(seq.Date(from = as.Date('2017/05/04'), to =Sys.Date(), by = "week")) %>%
   sapply(function(x) paste('to_date(\'', x, '\',\'YYYY-MM-DD\')', sep = ""))
 week.report.date <- Reduce(function(x,y) paste(x, y, sep = ","), week.report.date)
 
 
 # 双周报日期设定
-half.month.date <- as.list(seq.Date(from = as.Date('2017/05/05'), to = Sys.Date(), by = 14)) %>%
+half.month.date <- as.list(seq.Date(from = as.Date('2017/05/04'), to = Sys.Date(), by = 14)) %>%
   lapply(function(x) as.character(x, '%Y%m%d'))
 
-half.month.report.date <- as.list(seq.Date(from = as.Date('2017/05/05'), to = Sys.Date(), by = 14)) %>%
+half.month.report.date <- as.list(seq.Date(from = as.Date('2017/05/04'), to = Sys.Date(), by = 14)) %>%
   sapply(function(x) paste('to_date(\'', x, '\',\'YYYY-MM-DD\')', sep = ""))
 half.month.report.date <- Reduce(function(x,y) paste(x, y, sep = ","), half.month.report.date)
 
@@ -592,8 +592,8 @@ names(table.11.3) <- c("日期", "续贷人次", "续贷金额", "累计续贷�
 
 # OUTPUT
 # template
-ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBRweekRelated.xls"
-template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\weekRelated_bisRpts_all_", Sys.Date(), ".xls")
+ExcelFile <- "D:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBRweekRelated.xls"
+template <- paste0("D:\\Allinpay\\Data\\TeamWork\\dataForReport\\weekRelated_bisRpts_all_", Sys.Date(), ".xls")
 file.copy(ExcelFile, template)
 
 # output to excel

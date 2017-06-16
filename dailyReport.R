@@ -7,7 +7,7 @@ library(lubridate)
 library(sca)
 library(XLConnect)
 
-channel <- odbcConnect("OracleInstantClient", uid = "thbl", pwd = "thblserver")
+channel <- odbcConnect("oracle", uid = "thbl", pwd = "thblserver")
 
 # 15:28 PM 之后跑
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -561,8 +561,8 @@ names(table.11.3) <- c("日期", "续贷人次", "续贷金额", "累计续贷�
 
 # OUTPUT
 # template
-ExcelFile <- "E:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBRdaily.xls"
-template <- paste0("E:\\Allinpay\\Data\\TeamWork\\dataForReport\\daily_bisRpts_all_", Sys.Date(), ".xls")
+ExcelFile <- "D:\\Allinpay\\Data\\TeamWork\\dataForReport\\templateForBRdaily.xls"
+template <- paste0("D:\\Allinpay\\Data\\TeamWork\\dataForReport\\daily_bisRpts_all_", Sys.Date(), ".xls")
 file.copy(ExcelFile, template)
 
 
